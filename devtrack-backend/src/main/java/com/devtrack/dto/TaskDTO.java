@@ -4,21 +4,37 @@ import java.time.LocalDateTime;
 
 public class TaskDTO {
     private Long id;
+    
+    // Core fields
     private String title;
-    private String description;
     private String status;
+    private String priority;
+    
+    // Metadata fields
+    private String category;
+    private Integer estimatedMinutes;
+    private Integer actualMinutes;
+    private LocalDateTime completedAt;
+    
     private LocalDateTime createdAt;
+    private Long userId;
 
-    // Constructors
     public TaskDTO() {
     }
 
-    public TaskDTO(Long id, String title, String description, String status, LocalDateTime createdAt) {
+    public TaskDTO(Long id, String title, String status, String priority, 
+                   String category, Integer estimatedMinutes, Integer actualMinutes,
+                   LocalDateTime completedAt, LocalDateTime createdAt, Long userId) {
         this.id = id;
         this.title = title;
-        this.description = description;
         this.status = status;
+        this.priority = priority;
+        this.category = category;
+        this.estimatedMinutes = estimatedMinutes;
+        this.actualMinutes = actualMinutes;
+        this.completedAt = completedAt;
         this.createdAt = createdAt;
+        this.userId = userId;
     }
 
     // Getters and Setters
@@ -38,14 +54,6 @@ public class TaskDTO {
         this.title = title;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
     public String getStatus() {
         return status;
     }
@@ -54,11 +62,59 @@ public class TaskDTO {
         this.status = status;
     }
 
+    public String getPriority() {
+        return priority;
+    }
+
+    public void setPriority(String priority) {
+        this.priority = priority;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public Integer getEstimatedMinutes() {
+        return estimatedMinutes;
+    }
+
+    public void setEstimatedMinutes(Integer estimatedMinutes) {
+        this.estimatedMinutes = estimatedMinutes;
+    }
+
+    public Integer getActualMinutes() {
+        return actualMinutes;
+    }
+
+    public void setActualMinutes(Integer actualMinutes) {
+        this.actualMinutes = actualMinutes;
+    }
+
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }

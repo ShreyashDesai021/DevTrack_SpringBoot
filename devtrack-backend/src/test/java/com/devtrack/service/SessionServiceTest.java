@@ -1,10 +1,11 @@
 package com.devtrack.service;
 
 import com.devtrack.dto.SessionDTO;
-import com.devtrack.exception.ResourceNotFoundException;
 import com.devtrack.exception.ValidationException;
 import com.devtrack.model.CodingSession;
+import com.devtrack.model.User;
 import com.devtrack.repository.SessionRepository;
+import com.devtrack.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,7 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * JUnit tests for SessionService
+ * Tests user scoping and metadata handling
  */
 @ExtendWith(MockitoExtension.class)
 class SessionServiceTest {
@@ -30,145 +32,133 @@ class SessionServiceTest {
     @Mock
     private SessionRepository sessionRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private SessionService sessionService;
 
+    private User testUser;
     private CodingSession testSession;
 
     @BeforeEach
     void setUp() {
-        LocalDateTime startTime = LocalDateTime.of(2024, 4, 1, 10, 0);
-        LocalDateTime endTime = LocalDateTime.of(2024, 4, 1, 12, 0);
-        testSession = new CodingSession("DevTrack", startTime, endTime);
+        testUser = new User("Ann", "ann@example.com", "password");
+        testUser.setId(1L);
+
+        testSession = new CodingSession("DevTrack Backend", 180, LocalDate.now());
         testSession.setId(1L);
-        testSession.setDurationMinutes(120); // 2 hours
-        testSession.setCreatedAt(LocalDateTime.now());
+        testSession.setUser(testUser);
+        testSession.setSummary("Implemented JWT authentication");
+        testSession.setWorkType("Feature");
+        testSession.setOutcome("Completed");
+        testSession.setDifficulty("Hard");
+        testSession.setTags("Spring Security,JWT,BCrypt");
     }
 
     /**
-     * Test getAllSessions - Should return list of SessionDTOs
+     * Test getAllSessions returns only user's sessions
      */
     @Test
-    void shouldGetAllSessions() {
-        List<CodingSession> sessions = Arrays.asList(testSession);
-        when(sessionRepository.findAll()).thenReturn(sessions);
+    void shouldGetAllSessionsForUser() {
+        when(userRepository.findByEmail("ann@example.com")).thenReturn(Optional.of(testUser));
+        when(sessionRepository.findByUserOrderBySessionDateDesc(testUser))
+                .thenReturn(Arrays.asList(testSession));
 
-        List<SessionDTO> result = sessionService.getAllSessions();
+        List<SessionDTO> sessions = sessionService.getAllSessions("ann@example.com");
 
-        assertEquals(1, result.size());
-        assertEquals("DevTrack", result.get(0).getProjectName());
-        assertEquals(120, result.get(0).getDurationMinutes());
-        verify(sessionRepository, times(1)).findAll();
+        assertEquals(1, sessions.size());
+        assertEquals("DevTrack Backend", sessions.get(0).getProjectName());
+        assertEquals("Feature", sessions.get(0).getWorkType());
+        assertEquals("Spring Security,JWT,BCrypt", sessions.get(0).getTags());
+        verify(sessionRepository, times(1)).findByUserOrderBySessionDateDesc(testUser);
     }
 
     /**
-     * Test getSessionById - Should return SessionDTO when session exists
+     * Test createSession validates required fields
      */
     @Test
-    void shouldGetSessionById() {
-        when(sessionRepository.findById(1L)).thenReturn(Optional.of(testSession));
+    void shouldValidateProjectNameRequired() {
+        SessionDTO invalidSession = new SessionDTO();
+        invalidSession.setProjectName("");
+        invalidSession.setDurationMinutes(60);
+        invalidSession.setSessionDate(LocalDate.now());
 
-        SessionDTO result = sessionService.getSessionById(1L);
+        when(userRepository.findByEmail("ann@example.com")).thenReturn(Optional.of(testUser));
 
-        assertNotNull(result);
-        assertEquals(1L, result.getId());
-        assertEquals("DevTrack", result.getProjectName());
-        verify(sessionRepository, times(1)).findById(1L);
-    }
-
-    /**
-     * Test getSessionById - Should throw ResourceNotFoundException when session doesn't exist
-     */
-    @Test
-    void shouldThrowExceptionWhenSessionNotFound() {
-        when(sessionRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class, () -> {
-            sessionService.getSessionById(999L);
+        assertThrows(ValidationException.class, () -> {
+            sessionService.createSession(invalidSession, "ann@example.com");
         });
     }
 
     /**
-     * Test createSession - Should save and return SessionDTO
+     * Test createSession validates duration is positive
      */
     @Test
-    void shouldCreateSession() {
-        LocalDateTime startTime = LocalDateTime.of(2024, 4, 1, 10, 0);
-        LocalDateTime endTime = LocalDateTime.of(2024, 4, 1, 12, 0);
-        SessionDTO newSessionDTO = new SessionDTO(null, "New Project", startTime, endTime, null, null);
-        
+    void shouldValidateDurationPositive() {
+        SessionDTO invalidSession = new SessionDTO();
+        invalidSession.setProjectName("Test Project");
+        invalidSession.setDurationMinutes(0);
+        invalidSession.setSessionDate(LocalDate.now());
+
+        when(userRepository.findByEmail("ann@example.com")).thenReturn(Optional.of(testUser));
+
+        assertThrows(ValidationException.class, () -> {
+            sessionService.createSession(invalidSession, "ann@example.com");
+        });
+    }
+
+    /**
+     * Test createSession with complete metadata
+     */
+    @Test
+    void shouldCreateSessionWithMetadata() {
+        SessionDTO newSession = new SessionDTO();
+        newSession.setProjectName("DevTrack Backend");
+        newSession.setSummary("Built analytics engine");
+        newSession.setDurationMinutes(120);
+        newSession.setSessionDate(LocalDate.now());
+        newSession.setWorkType("Feature");
+        newSession.setOutcome("Completed");
+        newSession.setDifficulty("Medium");
+        newSession.setTags("Analytics,SQL,Queries");
+
+        when(userRepository.findByEmail("ann@example.com")).thenReturn(Optional.of(testUser));
         when(sessionRepository.save(any(CodingSession.class))).thenReturn(testSession);
 
-        SessionDTO result = sessionService.createSession(newSessionDTO);
+        SessionDTO result = sessionService.createSession(newSession, "ann@example.com");
 
         assertNotNull(result);
-        assertEquals("DevTrack", result.getProjectName());
         verify(sessionRepository, times(1)).save(any(CodingSession.class));
     }
 
     /**
-     * Test createSession - Should throw ValidationException when project name is empty
+     * Test getTotalCodingHours converts minutes to hours
      */
     @Test
-    void shouldThrowValidationExceptionWhenProjectNameEmpty() {
-        LocalDateTime startTime = LocalDateTime.of(2024, 4, 1, 10, 0);
-        LocalDateTime endTime = LocalDateTime.of(2024, 4, 1, 12, 0);
-        SessionDTO invalidSession = new SessionDTO(null, "", startTime, endTime, null, null);
+    void shouldConvertMinutesToHours() {
+        when(userRepository.findByEmail("ann@example.com")).thenReturn(Optional.of(testUser));
+        when(sessionRepository.sumTotalDurationMinutesByUser(testUser)).thenReturn(240L);
 
-        assertThrows(ValidationException.class, () -> {
-            sessionService.createSession(invalidSession);
-        });
-    }
-
-    /**
-     * Test createSession - Should throw ValidationException when end time is before start time
-     */
-    @Test
-    void shouldThrowValidationExceptionWhenEndTimeBeforeStartTime() {
-        LocalDateTime startTime = LocalDateTime.of(2024, 4, 1, 12, 0);
-        LocalDateTime endTime = LocalDateTime.of(2024, 4, 1, 10, 0); // Before start time
-        SessionDTO invalidSession = new SessionDTO(null, "Project", startTime, endTime, null, null);
-
-        assertThrows(ValidationException.class, () -> {
-            sessionService.createSession(invalidSession);
-        });
-    }
-
-    /**
-     * Test deleteSession - Should delete session when it exists
-     */
-    @Test
-    void shouldDeleteSession() {
-        when(sessionRepository.findById(1L)).thenReturn(Optional.of(testSession));
-
-        sessionService.deleteSession(1L);
-
-        verify(sessionRepository, times(1)).delete(testSession);
-    }
-
-    /**
-     * Test getTotalCodingHours - Should calculate hours from minutes
-     */
-    @Test
-    void shouldGetTotalCodingHours() {
-        when(sessionRepository.sumTotalDurationMinutes()).thenReturn(240L); // 4 hours
-
-        double hours = sessionService.getTotalCodingHours();
+        double hours = sessionService.getTotalCodingHours("ann@example.com");
 
         assertEquals(4.0, hours);
-        verify(sessionRepository, times(1)).sumTotalDurationMinutes();
+        verify(sessionRepository, times(1)).sumTotalDurationMinutesByUser(testUser);
     }
 
     /**
-     * Test getTotalSessionsCount - Should return total count
+     * Test user cannot delete another user's session
      */
     @Test
-    void shouldGetTotalSessionsCount() {
-        when(sessionRepository.count()).thenReturn(5L);
+    void shouldNotAllowDeletingOtherUserSession() {
+        User otherUser = new User("Other", "other@example.com", "pass");
+        otherUser.setId(2L);
 
-        long count = sessionService.getTotalSessionsCount();
+        when(userRepository.findByEmail("other@example.com")).thenReturn(Optional.of(otherUser));
+        when(sessionRepository.findById(1L)).thenReturn(Optional.of(testSession));
 
-        assertEquals(5L, count);
-        verify(sessionRepository, times(1)).count();
+        assertThrows(Exception.class, () -> {
+            sessionService.deleteSession(1L, "other@example.com");
+        });
     }
 }

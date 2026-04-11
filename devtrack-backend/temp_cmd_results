@@ -1,0 +1,56 @@
+anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ann@example.com","password":"password123"}'
+{"status":401,"message":"Invalid email or password","timestamp":"2026-04-11T12:11:20.452083702"}anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/login   -H "Content-Type: application/json"   -d '{"email":"ann@gmail.com:"password123"}'
+{"status":500,"message":"An unexpected error occurred: JSON parse error: Unexpected character ('p' (code 112)): was expecting a colon to separate field name andanu@laptop:~$ curl -X POST http://localhost:8080/api/auth/login   -H "Content-Type: application/json"   -d '{"email":"ann@gmail.com","password":"password123"}'
+{"status":401,"message":"Invalid email or password","timestamp":"2026-04-11T12:12:07.692971127"}anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/register \          curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Ann","email":"ann@example.com","password":"password123"}'
+{"status":500,"message":"An unexpected error occurred: The specified key byte array is 120 bits which is not secure enough for any JWT HMAC-SHA algorithm.  The JWT JWA Specification (RFC 7518, Section 3.2) states that keys used with HMAC-SHA algorithms MUST have a size >= 256 bits (the key size must be greater than or equal to the hash output size).  Consider using the Jwts.SIG.HS256.key() builder (or HS384.key() or HS512.key()) to create a key guaranteed to be secure enough for your preferred HMAC-SHA algorithm.  See https://tools.ietf.org/html/rfc7518#section-3.2 for more information.","timestamp":"2026-04-11T12:12:37.803213709"}anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/register   -H "Content-Type: application/json"   -d '{"name":"Ann","email":"ann@example.com","password":"password123"}'
+{"status":400,"message":"Email already registered","timestamp":"2026-04-11T12:19:11.727474058"}anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/login   -H "Content-Type: application/json"   -d '{"email":"ann@gmail.com","password":"password123"}'d":"password123"}'
+{"status":401,"message":"Invalid email or password","timestamp":"2026-04-11T12:19:37.457094705docker compose down -v compose down -v
+docker compose up --build
+no configuration file provided: not found
+no configuration file provided: not found
+anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/register   -H "Content-Type: application/json"   -d '{"name":"Ann","email":"ann@example.com","password":"password123"}'
+{"token":"eyJhbGciOiJIUzM4NCJ9.eyJ1c2VySWQiOjEsInN1YiI6ImFubkBleGFtcGxlLmNvbSIsImlhdCI6MTc3NTkxMDI4NywiZXhwIjoxNzc1OTk2Njg3fQ.z6U7x7B3l2b1_V55QylsbUhPNeCe6EaZ8GNX4QllvEzqzQ76oClEXH1a5jHs89vC","type":"Bearer","userId":1,"name":"Ann","email":"ann@example.ccurl -X POST http://localhost:8080/api/auth/login   -H "Content-Type: application/json"   -d '{"email":"ann@gmail.com","password":"password123"}'
+{"status":401,"message":"Invalid email or password","timestamp":"2026-04-11T12:25:00.850906417"}anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/login   -H "Content-Type: aregister   -H "Content-Type: application/json"   -d '{"name":"Ann","email":"ann@example.com","password":"password123"}'
+{"status":400,"message":"Email already registered","timestamp":"2026-04-11T12:25:25.07352651"}anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/login   anu@laptop:~$ pe: application/json"   -d '{"email":"ann@example.com   -H "Content-Type: application/json"   -d '{"email":"ann@gmail.com","password":"password123"}'
+anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/login   -H "Content-Type: application/json"   -d '{"email":"ann@email.com","password":"password123"}'
+{"status":401,"message":"Invalid email or password","timestamp":"2026-04-11T15:1anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/register   -H "Content-Type: application/json"   -d '{"name":"Ann","email":"ann@example.com","password":"password123"}'
+{"status":400,"message":"Email already registered","timestamp":"2026-04-11T15:15:18.511405923"}anu@laptop:~$ 
+anu@laptop:~$ curl -X GET http://localhost:8080/api/sessions \
+  -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJ1c2VySWQiOjEsInN1YiI6ImFubkBleGFtcGxlLmNvbSIsImlhdCI6MTc3NTkxMDI4NywiZXhwIjoxNzc1OTk2Njg3fQ.z6U7x7B3l2b1_V55QylsbUhPNeCe6EaZ8GNX4QllvEzqzQ76oClEXH1a5jHs89vC"
+[]anu@laptop:~$ 
+anu@laptop:~$ 
+anu@laptop:~$ curl -X POST http://localhost:8080/api/auth/login   -H "Content-Type: application/json"   -d '{"name":"Ann","email":"ann@example.com","password":"password123"}'
+{"token":"eyJhbGciOiJIUzM4NCJ9.eyJ1c2VySWQiOjEsInN1YiI6ImFubkBleGFtcGxlLmNvbSIsImlhdCI6MTc3NTkyMDYwNCwiZXhwIjoxNzc2MDA3MDA0fQ.tIA8VUoQg0_zqvAkriSNrbjqlLu-AgX2WSfxP1hE7jxTZIf-jPLyC0G_hphpBaKS","type":"Bearer","userId":1,"name":"Ann","email":"ann@example.com"}anu@laptop:~$ curl -X GET http://localhost:8080/api/sessions   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJ1c2VySWQiOjEsInN1YiI6ImFubkBleGFtcGxlLmNvbSIsImlhdCI6MTc3NTkxMDI4NywiZXhwIjoxNzc1OTk2Njg3fQ.z6U7x7B3l2b1_V55QylsbUhPNeCe6EaZ8GNX4QllvEzqzQ76oClEXH1a5jHs89vC"
+anu@laptop:~$ curl -X POST http://localhost:8080/api/sessions \ \
+  -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectName": "DevTrack",
+    "summary": "Testing session",
+    "durationMinutes": 120,
+    "sessionDate": "2026-04-11",
+    "workType": "Feature",
+    "outcome": "Completed",
+    "difficulty": "Medium",
+    "tags": "Spring,JWT"
+}'
+anu@laptop:~$ curl -X GET http://localhost:8080/api/sessions   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJ1c2VySWQiOjEsInN1YiI6ImFubkBleGFtcGxlLmNvbSIsImlhdCI6MTc3NTkxMDI4NywiZXhwIjoxNzc1OTk2Njg3fQ.z6U7x7B3l2b1_V55QylsbUhPNeCe6EaZ8GNX4QllvEzqzQ76oClEXH1a5jHs89vC"
+anu@laptop:~$ curl -X POST http://localhost:8080/api/sessions \
+  -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJ1c2VySWQiOjEsInN1YiI6ImFubkBleGFtcGxlLmNvbSIsImlhdCI6MTc3NTkxMDI4NywiZXhwIjoxNzc1OTk2Njg3fQ.z6U7x7B3l2b1_V55QylsbUhPNeCe6EaZ8GNX4QllvEzqzQ76oClEXH1a5jHs89vC" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "projectName": "DevTrack",
+    "summary": "Testing session",
+    "durationMinutes": 120,
+    "sessionDate": "2026-04-11",
+    "workType": "Feature",
+    "outcome": "Completed",
+    "difficulty": "Medium",
+    "tags": "Spring,JWT"
+}'
+{"id":1,"projectName":"DevTrack","summary":"Testing session","durationMinutes":120,"sessionDate":"2026-04-11","workType":"Feature","outcome":"Completed","difficulty":"Medium","tags":"Spring,JWT","createdAt":"2026-04-11T15:17:57.627581","userId":1}anu@laptop:~$ curl -X POST http://localhost:8080/api/sessions   -H "Authoanu@laptop:~$ er eyJhbGET http://localhost:8080/api/sessions   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJ1c2VySWQiOjEsInN1YiI6ImFubkBleGFtcGxlLmNvbSIsImlhdCI6MTc3NTkxMDI4NywiZXhwIjoxNzc1OTk2Njg3fQ.z6U7x7B3l2b1_V55QylsbUhPNeCe6EaZ8GNX4QllvEzqzQ76oClEXH1a5jHs89vC"
+[{"id":1,"projectName":"DevTrack","summary":"Testing session","durationMinutes":120,"sessionDate":"2026-04-11","workType":"Feature","outcome":"Completed","difficulty":"Medium","tags":"Spring,JWT","createdAt":"2026-04-11T15:17:57.627581","userId":1}]anu@laptop:~$ 

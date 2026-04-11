@@ -7,7 +7,6 @@ public class ErrorResponse {
     private String message;
     private LocalDateTime timestamp;
 
-    // Constructors
     public ErrorResponse() {
     }
 
@@ -17,7 +16,6 @@ public class ErrorResponse {
         this.timestamp = timestamp;
     }
 
-    // Getters and Setters
     public int getStatus() {
         return status;
     }

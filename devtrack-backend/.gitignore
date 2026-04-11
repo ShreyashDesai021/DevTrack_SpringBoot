@@ -53,3 +53,7 @@ Thumbs.db
 *.zip
 *.tar.gz
 *.rar
+
+# Sensitive configuration
+application-prod.properties
+application-dev.properties

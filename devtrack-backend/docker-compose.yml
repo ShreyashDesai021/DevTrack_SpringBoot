@@ -1,38 +1,57 @@
-version: "3.8"
-
 services:
-  db:
-    image: postgres:15
+  postgres:
+    image: postgres:16-alpine
     container_name: devtrack-postgres
-    restart: unless-stopped
-
     environment:
       POSTGRES_DB: devtrack
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-
     ports:
       - "5432:5432"
-
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - devtrack-network
 
-  devtrack-backend:
+  backend:
     build: .
-    container_name: devtrack-springboot-app
-
+    container_name: devtrack-backend
     ports:
       - "8080:8080"
-
-    depends_on:
-      - db
-
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/devtrack
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/devtrack
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: dGVzdC1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLUhTMjU2
+      JWT_EXPIRATION: 86400000
+    depends_on:
+      - postgres
+    networks:
+      - devtrack-network
 
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+  test:
+    image: maven:3.9-eclipse-temurin-17
+    working_dir: /app
+    volumes:
+      - .:/app
+      - maven-cache:/root/.m2
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/devtrack
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: dGVzdC1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLUhTMjU2
+      JWT_EXPIRATION: 86400000
+    depends_on:
+      - postgres
+    networks:
+      - devtrack-network
+    command: mvn clean test
+    profiles:
+      - test
 
 volumes:
-  pgdata:
+  postgres-data:
+  maven-cache:
+
+networks:
+  devtrack-network:

@@ -53,6 +53,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle AuthenticationException (401)
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            AuthenticationException ex, WebRequest request) {
+        
+        ErrorResponse error = new ErrorResponse(
+            HttpStatus.UNAUTHORIZED.value(),
+            ex.getMessage(),
+            LocalDateTime.now()
+        );
+        
+        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+    }
+
+    /**
      * Handle validation errors from @Valid annotations (400)
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)

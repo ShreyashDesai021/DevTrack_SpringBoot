@@ -2,9 +2,10 @@ package com.devtrack.service;
 
 import com.devtrack.dto.TaskDTO;
 import com.devtrack.exception.ResourceNotFoundException;
-import com.devtrack.exception.ValidationException;
 import com.devtrack.model.Task;
+import com.devtrack.model.User;
 import com.devtrack.repository.TaskRepository;
+import com.devtrack.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +24,7 @@ import static org.mockito.Mockito.*;
 
 /**
  * JUnit tests for TaskService
- * Tests business logic and repository interactions
+ * Tests user scoping and metadata handling
  */
 @ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
@@ -31,148 +32,125 @@ class TaskServiceTest {
     @Mock
     private TaskRepository taskRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private TaskService taskService;
 
+    private User testUser;
     private Task testTask;
 
     @BeforeEach
     void setUp() {
-        testTask = new Task("Build API", "Create REST endpoints", "PENDING");
+        testUser = new User("Ann", "ann@example.com", "password");
+        testUser.setId(1L);
+
+        testTask = new Task("Build REST API", "PENDING", "HIGH");
         testTask.setId(1L);
+        testTask.setUser(testUser);
+        testTask.setCategory("Backend");
+        testTask.setEstimatedMinutes(120);
         testTask.setCreatedAt(LocalDateTime.now());
     }
 
     /**
-     * Test getAllTasks - Should return list of TaskDTOs
+     * Test getAllTasks returns only user's tasks
      */
     @Test
-    void shouldGetAllTasks() {
-        List<Task> tasks = Arrays.asList(testTask);
-        when(taskRepository.findAll()).thenReturn(tasks);
+    void shouldGetAllTasksForUser() {
+        when(userRepository.findByEmail("ann@example.com")).thenReturn(Optional.of(testUser));
+        when(taskRepository.findByUser(testUser)).thenReturn(Arrays.asList(testTask));
 
-        List<TaskDTO> result = taskService.getAllTasks();
+        List<TaskDTO> tasks = taskService.getAllTasks("ann@example.com");
 
-        assertEquals(1, result.size());
-        assertEquals("Build API", result.get(0).getTitle());
-        verify(taskRepository, times(1)).findAll();
+        assertEquals(1, tasks.size());
+        assertEquals("Build REST API", tasks.get(0).getTitle());
+        assertEquals("Backend", tasks.get(0).getCategory());
+        verify(taskRepository, times(1)).findByUser(testUser);
     }
 
     /**
-     * Test getTaskById - Should return TaskDTO when task exists
+     * Test createTask associates task with user
      */
     @Test
-    void shouldGetTaskById() {
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    void shouldCreateTaskForUser() {
+        TaskDTO newTaskDTO = new TaskDTO();
+        newTaskDTO.setTitle("New Task");
+        newTaskDTO.setCategory("Frontend");
+        newTaskDTO.setEstimatedMinutes(60);
 
-        TaskDTO result = taskService.getTaskById(1L);
-
-        assertNotNull(result);
-        assertEquals(1L, result.getId());
-        assertEquals("Build API", result.getTitle());
-        verify(taskRepository, times(1)).findById(1L);
-    }
-
-    /**
-     * Test getTaskById - Should throw ResourceNotFoundException when task doesn't exist
-     */
-    @Test
-    void shouldThrowExceptionWhenTaskNotFound() {
-        when(taskRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThrows(ResourceNotFoundException.class, () -> {
-            taskService.getTaskById(999L);
-        });
-    }
-
-    /**
-     * Test createTask - Should save and return TaskDTO
-     */
-    @Test
-    void shouldCreateTask() {
-        TaskDTO newTaskDTO = new TaskDTO(null, "New Task", "Description", "PENDING", null);
+        when(userRepository.findByEmail("ann@example.com")).thenReturn(Optional.of(testUser));
         when(taskRepository.save(any(Task.class))).thenReturn(testTask);
 
-        TaskDTO result = taskService.createTask(newTaskDTO);
+        TaskDTO result = taskService.createTask(newTaskDTO, "ann@example.com");
 
         assertNotNull(result);
-        assertEquals("Build API", result.getTitle());
         verify(taskRepository, times(1)).save(any(Task.class));
     }
 
     /**
-     * Test createTask - Should throw ValidationException when title is empty
+     * Test getTaskById validates user ownership
      */
     @Test
-    void shouldThrowValidationExceptionWhenTitleEmpty() {
-        TaskDTO invalidTask = new TaskDTO(null, "", "Description", "PENDING", null);
+    void shouldGetTaskByIdForCorrectUser() {
+        when(userRepository.findByEmail("ann@example.com")).thenReturn(Optional.of(testUser));
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
 
-        assertThrows(ValidationException.class, () -> {
-            taskService.createTask(invalidTask);
+        TaskDTO result = taskService.getTaskById(1L, "ann@example.com");
+
+        assertNotNull(result);
+        assertEquals(1L, result.getId());
+        assertEquals("Build REST API", result.getTitle());
+    }
+
+    /**
+     * Test user cannot access another user's task
+     */
+    @Test
+    void shouldNotAllowAccessToOtherUserTask() {
+        User otherUser = new User("Other", "other@example.com", "pass");
+        otherUser.setId(2L);
+
+        when(userRepository.findByEmail("other@example.com")).thenReturn(Optional.of(otherUser));
+        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+
+        // testTask belongs to testUser (id=1), but otherUser (id=2) is trying to access it
+        assertThrows(ResourceNotFoundException.class, () -> {
+            taskService.getTaskById(1L, "other@example.com");
         });
     }
 
     /**
-     * Test deleteTask - Should delete task when it exists
+     * Test marking task as DONE sets completedAt
      */
     @Test
-    void shouldDeleteTask() {
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    void shouldSetCompletedAtWhenMarkingDone() {
+        TaskDTO updateDTO = new TaskDTO();
+        updateDTO.setStatus("DONE");
 
-        taskService.deleteTask(1L);
-
-        verify(taskRepository, times(1)).delete(testTask);
-    }
-
-    /**
-     * Test updateTaskStatus - Should update status to DONE
-     */
-    @Test
-    void shouldUpdateTaskStatus() {
+        when(userRepository.findByEmail("ann@example.com")).thenReturn(Optional.of(testUser));
         when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
         when(taskRepository.save(any(Task.class))).thenReturn(testTask);
 
-        TaskDTO result = taskService.updateTaskStatus(1L, "DONE");
+        taskService.updateTask(1L, updateDTO, "ann@example.com");
 
-        assertEquals("DONE", result.getStatus());
+        assertEquals("DONE", testTask.getStatus());
+        assertNotNull(testTask.getCompletedAt());
         verify(taskRepository, times(1)).save(testTask);
     }
 
     /**
-     * Test updateTaskStatus - Should throw ValidationException for invalid status
+     * Test getCompletedTasksCount is user-scoped
      */
     @Test
-    void shouldThrowExceptionForInvalidStatus() {
-        when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    void shouldGetCompletedTasksCountForUser() {
+        when(userRepository.findByEmail("ann@example.com")).thenReturn(Optional.of(testUser));
+        when(taskRepository.countByUserAndStatus(testUser, "DONE")).thenReturn(5L);
 
-        assertThrows(ValidationException.class, () -> {
-            taskService.updateTaskStatus(1L, "INVALID");
-        });
-    }
-
-    /**
-     * Test getCompletedTasksCount - Should return count of DONE tasks
-     */
-    @Test
-    void shouldGetCompletedTasksCount() {
-        when(taskRepository.countByStatus("DONE")).thenReturn(5L);
-
-        long count = taskService.getCompletedTasksCount();
+        long count = taskService.getCompletedTasksCount("ann@example.com");
 
         assertEquals(5L, count);
-        verify(taskRepository, times(1)).countByStatus("DONE");
-    }
-
-    /**
-     * Test getTotalTasksCount - Should return total count
-     */
-    @Test
-    void shouldGetTotalTasksCount() {
-        when(taskRepository.count()).thenReturn(10L);
-
-        long count = taskService.getTotalTasksCount();
-
-        assertEquals(10L, count);
-        verify(taskRepository, times(1)).count();
+        verify(taskRepository, times(1)).countByUserAndStatus(testUser, "DONE");
     }
 }

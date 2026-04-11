@@ -6,11 +6,15 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
+/**
+ * Task Controller
+ * All endpoints require JWT authentication
+ */
 @RestController
 @RequestMapping("/api/tasks")
 @CrossOrigin(origins = "*")
@@ -20,11 +24,12 @@ public class TaskController {
     private TaskService taskService;
 
     /**
-     * GET /api/tasks - Get all tasks
+     * GET /api/tasks - Get all tasks for authenticated user
      */
     @GetMapping
-    public ResponseEntity<List<TaskDTO>> getAllTasks() {
-        List<TaskDTO> tasks = taskService.getAllTasks();
+    public ResponseEntity<List<TaskDTO>> getAllTasks(Authentication authentication) {
+        String userEmail = authentication.getName();
+        List<TaskDTO> tasks = taskService.getAllTasks(userEmail);
         return ResponseEntity.ok(tasks);
     }
 
@@ -32,8 +37,9 @@ public class TaskController {
      * GET /api/tasks/{id} - Get task by ID
      */
     @GetMapping("/{id}")
-    public ResponseEntity<TaskDTO> getTaskById(@PathVariable Long id) {
-        TaskDTO task = taskService.getTaskById(id);
+    public ResponseEntity<TaskDTO> getTaskById(@PathVariable Long id, Authentication authentication) {
+        String userEmail = authentication.getName();
+        TaskDTO task = taskService.getTaskById(id, userEmail);
         return ResponseEntity.ok(task);
     }
 
@@ -41,8 +47,11 @@ public class TaskController {
      * POST /api/tasks - Create new task
      */
     @PostMapping
-    public ResponseEntity<TaskDTO> createTask(@Valid @RequestBody TaskDTO taskDTO) {
-        TaskDTO createdTask = taskService.createTask(taskDTO);
+    public ResponseEntity<TaskDTO> createTask(
+            @Valid @RequestBody TaskDTO taskDTO,
+            Authentication authentication) {
+        String userEmail = authentication.getName();
+        TaskDTO createdTask = taskService.createTask(taskDTO, userEmail);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdTask);
     }
 
@@ -52,8 +61,10 @@ public class TaskController {
     @PutMapping("/{id}")
     public ResponseEntity<TaskDTO> updateTask(
             @PathVariable Long id,
-            @RequestBody TaskDTO taskDTO) {
-        TaskDTO updatedTask = taskService.updateTask(id, taskDTO);
+            @RequestBody TaskDTO taskDTO,
+            Authentication authentication) {
+        String userEmail = authentication.getName();
+        TaskDTO updatedTask = taskService.updateTask(id, taskDTO, userEmail);
         return ResponseEntity.ok(updatedTask);
     }
 
@@ -61,20 +72,9 @@ public class TaskController {
      * DELETE /api/tasks/{id} - Delete task
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
-        taskService.deleteTask(id);
+    public ResponseEntity<Void> deleteTask(@PathVariable Long id, Authentication authentication) {
+        String userEmail = authentication.getName();
+        taskService.deleteTask(id, userEmail);
         return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * PATCH /api/tasks/{id}/status - Update task status
-     */
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<TaskDTO> updateTaskStatus(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> statusUpdate) {
-        String status = statusUpdate.get("status");
-        TaskDTO updatedTask = taskService.updateTaskStatus(id, status);
-        return ResponseEntity.ok(updatedTask);
     }
 }

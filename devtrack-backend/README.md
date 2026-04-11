@@ -1,286 +1,463 @@
-# DevTrack Backend - Developer Productivity Tracker
+# DevTrack Backend v2.0 - Developer Productivity Tracker
 
-A Spring Boot REST API for tracking developer tasks and coding sessions with comprehensive testing.
+A Spring Boot REST API with **JWT authentication**, rich metadata tracking, and comprehensive analytics for developer productivity.
 
-## 📋 Features
+## 🎯 Features
 
-- ✅ **Task Management** - CRUD operations for developer tasks
-- ✅ **Coding Session Tracking** - Track time spent on projects
-- ✅ **Dashboard Statistics** - Aggregated productivity metrics
-- ✅ **Global Exception Handling** - @ControllerAdvice with custom exceptions
+- ✅ **JWT Authentication** - Secure user registration and login with BCrypt password hashing
+- ✅ **User-Scoped Data** - Each user sees only their own tasks and sessions
+- ✅ **Rich Task Metadata** - Category, estimates, actuals, completion tracking
+- ✅ **Rich Session Metadata** - Work type, outcome, difficulty, tags
+- ✅ **Analytics Engine** - Success rate, streaks, time distribution, estimation accuracy
+- ✅ **@ControllerAdvice** - Global exception handling
 - ✅ **Comprehensive Testing** - MockMvc + JUnit tests
 - ✅ **Clean Architecture** - Controller → Service → Repository pattern
 
 ## 🏗️ Architecture
 
 ```
-Controller Layer  →  Service Layer  →  Repository Layer  →  Database
-     ↓                    ↓                   ↓
-  REST API          Business Logic        JPA/Hibernate      PostgreSQL
+┌─────────────────────────────────────────────────┐
+│         React Frontend (with JWT)               │
+│   - Login/Register                              │
+│   - Task Dashboard                              │
+│   - Session Tracker                             │
+│   - Analytics View                              │
+└─────────────────┬───────────────────────────────┘
+                  │ REST API (JWT Bearer Token)
+┌─────────────────▼───────────────────────────────┐
+│    Spring Boot Backend + Spring Security        │
+│                                                  │
+│  ┌────────────────────────────────────────────┐ │
+│  │    JWT Authentication Filter               │ │
+│  │    Validates Bearer tokens                 │ │
+│  └────────────────────────────────────────────┘ │
+│                                                  │
+│  ┌────────────────────────────────────────────┐ │
+│  │    @ControllerAdvice                       │ │
+│  │    Global Exception Handler                │ │
+│  └────────────────────────────────────────────┘ │
+│                                                  │
+│  Controllers (JWT Protected)                    │
+│  - AuthController (Public)                      │
+│  - TaskController (Protected)                   │
+│  - SessionController (Protected)                │
+│  - AnalyticsController (Protected)              │
+│                                                  │
+│  Services (Business Logic)                      │
+│  - AuthService (BCrypt + JWT)                   │
+│  - TaskService (User-scoped CRUD)               │
+│  - SessionService (User-scoped CRUD)            │
+│  - AnalyticsService (Derived metrics)           │
+│                                                  │
+│  Repositories (JPA)                             │
+│  - UserRepository                               │
+│  - TaskRepository (User-scoped queries)         │
+│  - SessionRepository (Analytics queries)        │
+│                                                  │
+│  ┌────────────────────────────────────────────┐ │
+│  │       PostgreSQL Database                  │ │
+│  │   - users (BCrypt passwords)               │ │
+│  │   - tasks (with metadata)                  │ │
+│  │   - coding_sessions (with metadata)        │ │
+│  └────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────┘
 ```
 
-## 🛠️ Tech Stack
+## 🗄️ Database Schema
 
-- **Java 17**
-- **Spring Boot 3.2.0**
-- **Spring Data JPA**
-- **PostgreSQL** (production)
-- **H2** (testing)
-- **JUnit 5** + **MockMvc**
-- **Maven**
-
-## 📦 Installation
-
-### Prerequisites
-- Java 17 or higher
-- Maven 3.6+
-- PostgreSQL (for local development)
-
-### Setup
-
-1. **Clone the repository**
-   ```bash
-   cd devtrack-backend
-   ```
-
-2. **Configure database**
-   
-   Edit `src/main/resources/application.properties`:
-   ```properties
-   spring.datasource.url=jdbc:postgresql://localhost:5432/devtrack
-   spring.datasource.username=YOUR_USERNAME
-   spring.datasource.password=YOUR_PASSWORD
-   ```
-
-3. **Create PostgreSQL database**
-   ```sql
-   CREATE DATABASE devtrack;
-   ```
-
-4. **Build the project**
-   ```bash
-   mvn clean install
-   ```
-
-5. **Run the application**
-   ```bash
-   mvn spring-boot:run
-   ```
-
-   The API will be available at: `http://localhost:8080`
-
-## 🧪 Running Tests
-
-### Run all tests
-```bash
-mvn test
+### USERS
+```sql
+id              BIGSERIAL PRIMARY KEY
+name            VARCHAR(100)
+email           VARCHAR(255) UNIQUE
+password        VARCHAR(255)  -- BCrypt hashed
+created_at      TIMESTAMP
 ```
 
-### Run specific test class
-```bash
-mvn test -Dtest=TaskControllerTest
-mvn test -Dtest=SessionServiceTest
+### TASKS
+```sql
+id                  BIGSERIAL PRIMARY KEY
+user_id             BIGINT REFERENCES users(id)
+-- Core fields
+title               VARCHAR(255)
+status              VARCHAR(20)  -- PENDING, IN_PROGRESS, DONE
+priority            VARCHAR(20)  -- LOW, MEDIUM, HIGH
+-- Metadata fields
+category            VARCHAR(50)  -- Backend, Frontend, Database, etc.
+estimated_minutes   INTEGER
+actual_minutes      INTEGER
+completed_at        TIMESTAMP
+created_at          TIMESTAMP
 ```
 
-### Run with coverage
-```bash
-mvn test jacoco:report
+### CODING_SESSIONS
+```sql
+id                  BIGSERIAL PRIMARY KEY
+user_id             BIGINT REFERENCES users(id)
+-- Core fields
+project_name        VARCHAR(255)
+summary             TEXT
+duration_minutes    INTEGER
+session_date        DATE
+-- Metadata fields
+work_type           VARCHAR(50)  -- Feature, Bugfix, Refactor, Learning
+outcome             VARCHAR(50)  -- Completed, In Progress, Blocked, Prototype
+difficulty          VARCHAR(20)  -- Easy, Medium, Hard, Very Hard
+tags                TEXT         -- Comma-separated: "React,Redux,API"
+created_at          TIMESTAMP
 ```
 
-### Test Coverage
-- **18 total tests**
-- **MockMvc tests**: 14 (controller layer)
-- **JUnit tests**: 18 (service layer)
-- Covers: CRUD operations, exception handling, validation, business logic
+## 🔌 API Endpoints
 
-## 📡 API Endpoints
-
-### Tasks
+### Authentication (Public)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/tasks` | Get all tasks |
-| GET | `/api/tasks/{id}` | Get task by ID |
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login user (returns JWT) |
+
+### Tasks (JWT Protected)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/tasks` | Get all tasks for authenticated user |
+| GET | `/api/tasks/{id}` | Get task by ID (user-scoped) |
 | POST | `/api/tasks` | Create new task |
 | PUT | `/api/tasks/{id}` | Update task |
 | DELETE | `/api/tasks/{id}` | Delete task |
-| PATCH | `/api/tasks/{id}/status` | Update task status |
 
-### Sessions
+### Sessions (JWT Protected)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/sessions` | Get all sessions |
-| GET | `/api/sessions/{id}` | Get session by ID |
+| GET | `/api/sessions` | Get all sessions for authenticated user |
+| GET | `/api/sessions/{id}` | Get session by ID (user-scoped) |
 | POST | `/api/sessions` | Create new session |
 | DELETE | `/api/sessions/{id}` | Delete session |
 
-### Dashboard
+### Analytics (JWT Protected)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/dashboard/stats` | Get summary statistics |
+| GET | `/api/analytics` | Get complete analytics for authenticated user |
 
-## 📝 Example Requests
+## 📝 Example API Usage
 
-### Create Task
+### 1. Register User
 ```bash
-curl -X POST http://localhost:8080/api/tasks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Build REST API",
-    "description": "Create Spring Boot backend",
-    "status": "PENDING"
-  }'
-```
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
 
-### Create Coding Session
-```bash
-curl -X POST http://localhost:8080/api/sessions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "projectName": "DevTrack Backend",
-    "startTime": "2024-04-01T10:00:00",
-    "endTime": "2024-04-01T12:30:00"
-  }'
-```
-
-### Get Dashboard Stats
-```bash
-curl http://localhost:8080/api/dashboard/stats
+{
+  "name": "Ann",
+  "email": "ann@example.com",
+  "password": "password123"
+}
 ```
 
 **Response:**
 ```json
 {
-  "totalTasks": 15,
-  "completedTasks": 8,
-  "totalCodingHours": 24.5,
-  "totalSessions": 12
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "type": "Bearer",
+  "userId": 1,
+  "name": "Ann",
+  "email": "ann@example.com"
 }
 ```
 
-## 🧩 Project Structure
+### 2. Login
+```bash
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ann@example.com",
+  "password": "password123"
+}
+```
+
+**Response:** Same as registration
+
+### 3. Create Task (with JWT)
+```bash
+POST http://localhost:8080/api/tasks
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "title": "Build REST API",
+  "status": "IN_PROGRESS",
+  "priority": "HIGH",
+  "category": "Backend",
+  "estimatedMinutes": 120
+}
+```
+
+### 4. Create Coding Session (with JWT)
+```bash
+POST http://localhost:8080/api/sessions
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "projectName": "DevTrack Backend",
+  "summary": "Implemented JWT authentication and user scoping",
+  "durationMinutes": 180,
+  "sessionDate": "2024-04-07",
+  "workType": "Feature",
+  "outcome": "Completed",
+  "difficulty": "Hard",
+  "tags": "Spring Security,JWT,BCrypt"
+}
+```
+
+### 5. Get Analytics (with JWT)
+```bash
+GET http://localhost:8080/api/analytics
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Response:**
+```json
+{
+  "successRate": 75.5,
+  "currentStreak": 5,
+  "longestStreak": 12,
+  "timeByCategory": {
+    "Backend": 15,
+    "Frontend": 8,
+    "Database": 3
+  },
+  "timeByProject": {
+    "DevTrack": 520,
+    "Portfolio Site": 180
+  },
+  "timeByWorkType": {
+    "Feature": 450,
+    "Bugfix": 150,
+    "Refactor": 100
+  },
+  "topProject": "DevTrack",
+  "topCategory": "Backend",
+  "estimationAccuracy": 82.3,
+  "averageEstimationError": 15
+}
+```
+
+## 🔐 JWT Authentication Flow
+
+1. **Register/Login**: User receives JWT token
+2. **Store Token**: Frontend stores token (localStorage or memory)
+3. **Authenticated Requests**: Include token in Authorization header
+   ```
+   Authorization: Bearer <jwt-token>
+   ```
+4. **Token Validation**: JwtAuthenticationFilter validates every request
+5. **User Context**: Controller extracts user email from Authentication object
+6. **Data Scoping**: Services filter data by authenticated user
+
+## 🧪 Running Tests
+
+```bash
+# Run all tests
+mvn test
+
+# Run specific test class
+mvn test -Dtest=AuthServiceTest
+mvn test -Dtest=TaskControllerTest
+
+# Tests included:
+# - AuthServiceTest (BCrypt password hashing, JWT generation)
+# - TaskServiceTest (User scoping, metadata handling)
+# - AuthControllerTest (Registration, login endpoints)
+# - TaskControllerTest (JWT-protected CRUD operations)
+```
+
+## 🚀 Setup & Deployment
+
+### 1. Database Setup
+
+**Option A: Railway (Recommended)**
+- Go to railway.app
+- Create PostgreSQL database
+- Copy DATABASE_URL
+
+**Option B: Local PostgreSQL**
+```bash
+createdb devtrack
+```
+
+### 2. Configure Database
+
+Edit `src/main/resources/application.properties`:
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/devtrack
+spring.datasource.username=postgres
+spring.datasource.password=YOUR_PASSWORD
+
+# JWT Secret (change for production!)
+jwt.secret=your-secret-key-minimum-256-bits
+jwt.expiration=86400000
+```
+
+### 3. Build & Run
+
+```bash
+# Install dependencies
+mvn clean install
+
+# Run application
+mvn spring-boot:run
+```
+
+Application starts on: `http://localhost:8080`
+
+### 4. Test Authentication
+
+```bash
+# Register
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Ann","email":"ann@example.com","password":"test123"}'
+
+# Login
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"ann@example.com","password":"test123"}'
+```
+
+## 📊 Analytics Metrics Explained
+
+### Success Rate
+Percentage of tasks marked as DONE out of total tasks created.
+
+### Current Streak
+Number of consecutive days (from today backwards) with at least one coding session.
+
+### Longest Streak
+Longest consecutive streak of coding days in the last 90 days.
+
+### Time Distribution
+Breakdown of time spent by:
+- **Category**: From tasks (Backend, Frontend, etc.)
+- **Project**: From sessions
+- **Work Type**: From sessions (Feature, Bugfix, etc.)
+
+### Estimation Accuracy
+How accurate are your time estimates:
+- Compares `estimatedMinutes` vs `actualMinutes` for completed tasks
+- Lower error = higher accuracy
+- Helps improve planning over time
+
+## 🛠️ Tech Stack
+
+- **Java 17**
+- **Spring Boot 3.2.0**
+- **Spring Security** (JWT authentication)
+- **Spring Data JPA**
+- **PostgreSQL** (production)
+- **H2** (testing)
+- **JJWT 0.12.3** (JWT library)
+- **BCrypt** (password hashing)
+- **JUnit 5** + **MockMvc**
+- **Maven**
+
+## 🔒 Security Features
+
+1. **BCrypt Password Hashing**: Passwords never stored in plain text
+2. **JWT Tokens**: Stateless authentication (24-hour expiration)
+3. **User Data Isolation**: Each user can only access their own data
+4. **Input Validation**: @Valid annotations on all inputs
+5. **CORS Configuration**: Configurable for production
+6. **Exception Handling**: No sensitive data in error responses
+
+## 🐛 Troubleshooting
+
+### "Unauthorized" errors
+- Check JWT token is included: `Authorization: Bearer <token>`
+- Token might be expired (24 hours validity)
+- Re-login to get new token
+
+### "User not found" errors
+- Register first using `/api/auth/register`
+- Verify email is correct
+
+### Database connection errors
+- Check PostgreSQL is running
+- Verify credentials in `application.properties`
+- Database must exist (create with `createdb devtrack`)
+
+## 📚 Project Structure
 
 ```
 src/
 ├── main/java/com/devtrack/
-│   ├── controller/         # REST endpoints
-│   │   ├── TaskController.java
-│   │   ├── SessionController.java
-│   │   └── DashboardController.java
-│   ├── service/           # Business logic
-│   │   ├── TaskService.java
-│   │   └── SessionService.java
-│   ├── repository/        # Database access
-│   │   ├── TaskRepository.java
-│   │   └── SessionRepository.java
-│   ├── model/            # Entities
-│   │   ├── Task.java
-│   │   └── CodingSession.java
-│   ├── dto/              # Data Transfer Objects
+│   ├── controller/
+│   │   ├── AuthController.java         # Registration & Login
+│   │   ├── TaskController.java         # Task CRUD (JWT protected)
+│   │   ├── SessionController.java      # Session CRUD (JWT protected)
+│   │   └── AnalyticsController.java    # Analytics (JWT protected)
+│   │
+│   ├── service/
+│   │   ├── AuthService.java            # BCrypt + JWT logic
+│   │   ├── TaskService.java            # User-scoped task logic
+│   │   ├── SessionService.java         # User-scoped session logic
+│   │   └── AnalyticsService.java       # Derived metrics calculation
+│   │
+│   ├── security/
+│   │   ├── JwtUtil.java                # JWT generation & validation
+│   │   └── JwtAuthenticationFilter.java # Request interceptor
+│   │
+│   ├── model/
+│   │   ├── User.java                   # User entity
+│   │   ├── Task.java                   # Task entity (with metadata)
+│   │   └── CodingSession.java          # Session entity (with metadata)
+│   │
+│   ├── repository/
+│   │   ├── UserRepository.java         # User queries
+│   │   ├── TaskRepository.java         # User-scoped task queries
+│   │   └── SessionRepository.java      # Analytics queries
+│   │
+│   ├── dto/
+│   │   ├── RegisterRequest.java
+│   │   ├── LoginRequest.java
+│   │   ├── AuthResponse.java
 │   │   ├── TaskDTO.java
 │   │   ├── SessionDTO.java
-│   │   ├── DashboardStatsDTO.java
-│   │   └── ErrorResponse.java
-│   ├── exception/        # Custom exceptions
-│   │   ├── GlobalExceptionHandler.java  (@ControllerAdvice)
+│   │   └── AnalyticsDTO.java
+│   │
+│   ├── exception/
+│   │   ├── GlobalExceptionHandler.java  # @ControllerAdvice
 │   │   ├── ResourceNotFoundException.java
-│   │   └── ValidationException.java
-│   └── DevTrackApplication.java
+│   │   ├── ValidationException.java
+│   │   └── AuthenticationException.java
+│   │
+│   └── config/
+│       └── SecurityConfig.java          # Spring Security config
 │
 └── test/java/com/devtrack/
-    ├── controller/       # MockMvc tests
-    │   ├── TaskControllerTest.java
-    │   └── SessionControllerTest.java
-    └── service/         # JUnit tests
-        ├── TaskServiceTest.java
-        └── SessionServiceTest.java
+    ├── controller/
+    │   ├── AuthControllerTest.java
+    │   └── TaskControllerTest.java
+    └── service/
+        ├── AuthServiceTest.java
+        └── TaskServiceTest.java
 ```
-
-## 🚀 Deployment
-
-### Railway (Recommended)
-
-1. Create Railway account at railway.app
-2. Create new project
-3. Add PostgreSQL database
-4. Deploy Spring Boot app
-5. Set environment variables:
-   ```
-   SPRING_DATASOURCE_URL=${DATABASE_URL}
-   ```
-
-### Environment Variables for Production
-
-```properties
-SPRING_DATASOURCE_URL=jdbc:postgresql://...
-SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=...
-SPRING_JPA_HIBERNATE_DDL_AUTO=update
-```
-
-## 🧠 Key Features for Evaluation
-
-### 1. @ControllerAdvice (Global Exception Handling)
-Located in `GlobalExceptionHandler.java`:
-- Handles `ResourceNotFoundException` (404)
-- Handles `ValidationException` (400)
-- Handles validation errors from `@Valid`
-- Provides consistent error responses
-
-### 2. MockMvc Testing
-14 tests covering:
-- All CRUD endpoints
-- Exception handling
-- HTTP status codes
-- JSON response validation
-
-### 3. JUnit Testing
-18 tests covering:
-- Service layer business logic
-- Repository interactions
-- Validation logic
-- Edge cases
-
-### 4. Business Logic
-- Automatic duration calculation in CodingSession
-- Task status validation (PENDING/DONE only)
-- End time must be after start time
-- Dashboard aggregation queries
-
-## 🐛 Troubleshooting
-
-### Tests failing with database connection error
-Solution: Tests use H2 in-memory database automatically. No PostgreSQL needed for tests.
-
-### Port 8080 already in use
-Solution: Change port in `application.properties`:
-```properties
-server.port=8081
-```
-
-### CORS errors from frontend
-Solution: Controllers already have `@CrossOrigin(origins = "*")`. For production, restrict to specific domain.
-
-## 📚 Learning Resources
-
-- [Spring Boot Documentation](https://spring.io/projects/spring-boot)
-- [Spring Data JPA](https://spring.io/projects/spring-data-jpa)
-- [JUnit 5 User Guide](https://junit.org/junit5/docs/current/user-guide/)
-- [MockMvc Testing](https://spring.io/guides/gs/testing-web/)
 
 ## 👥 Author
 
-Built as a college project demonstrating:
-- Spring Boot REST API development
+Built as a college full-stack project demonstrating:
+- JWT authentication with Spring Security
+- BCrypt password hashing
+- User-scoped data architecture
+- Rich metadata tracking
+- Analytics engine
 - Clean architecture patterns
-- Comprehensive testing (MockMvc + JUnit)
-- Global exception handling
-- Database design with JPA
+- Comprehensive testing
 
 ---
 
-**API Base URL (Local):** `http://localhost:8080`  
-**Version:** 1.0.0  
-**Last Updated:** April 2024
+**Version:** 2.0.0  
+**Last Updated:** April 2024  
+**API Base URL:** `http://localhost:8080`

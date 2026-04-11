@@ -3,9 +3,11 @@ package com.devtrack.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -16,44 +18,52 @@ public class CodingSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Core fields
     @NotBlank(message = "Project name is required")
     @Column(name = "project_name", nullable = false)
     private String projectName;
 
-    @NotNull(message = "Start time is required")
-    @Column(name = "start_time", nullable = false)
-    private LocalDateTime startTime;
+    @Column(columnDefinition = "TEXT")
+    private String summary; // Brief description of what was done
 
-    @NotNull(message = "End time is required")
-    @Column(name = "end_time", nullable = false)
-    private LocalDateTime endTime;
-
-    @Column(name = "duration_minutes")
+    @Column(name = "duration_minutes", nullable = false)
     private Integer durationMinutes;
+
+    @NotNull(message = "Session date is required")
+    @Column(name = "session_date", nullable = false)
+    private LocalDate sessionDate; // Date of the coding session
+
+    // Metadata fields
+    @Size(max = 50)
+    @Column(name = "work_type")
+    private String workType; // e.g., "Feature", "Bugfix", "Refactor", "Learning"
+
+    @Size(max = 50)
+    private String outcome; // e.g., "Completed", "In Progress", "Blocked", "Prototype"
+
+    @Size(max = 20)
+    private String difficulty; // e.g., "Easy", "Medium", "Hard", "Very Hard"
+
+    @Column(columnDefinition = "TEXT")
+    private String tags; // Comma-separated tags: "React,Redux,API"
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    // User relationship
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     // Constructors
     public CodingSession() {
     }
 
-    public CodingSession(String projectName, LocalDateTime startTime, LocalDateTime endTime) {
+    public CodingSession(String projectName, Integer durationMinutes, LocalDate sessionDate) {
         this.projectName = projectName;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.calculateDuration();
-    }
-
-    // Business logic: Calculate duration automatically
-    @PrePersist
-    @PreUpdate
-    public void calculateDuration() {
-        if (startTime != null && endTime != null) {
-            Duration duration = Duration.between(startTime, endTime);
-            this.durationMinutes = (int) duration.toMinutes();
-        }
+        this.durationMinutes = durationMinutes;
+        this.sessionDate = sessionDate;
     }
 
     // Getters and Setters
@@ -73,20 +83,12 @@ public class CodingSession {
         this.projectName = projectName;
     }
 
-    public LocalDateTime getStartTime() {
-        return startTime;
+    public String getSummary() {
+        return summary;
     }
 
-    public void setStartTime(LocalDateTime startTime) {
-        this.startTime = startTime;
-    }
-
-    public LocalDateTime getEndTime() {
-        return endTime;
-    }
-
-    public void setEndTime(LocalDateTime endTime) {
-        this.endTime = endTime;
+    public void setSummary(String summary) {
+        this.summary = summary;
     }
 
     public Integer getDurationMinutes() {
@@ -97,11 +99,59 @@ public class CodingSession {
         this.durationMinutes = durationMinutes;
     }
 
+    public LocalDate getSessionDate() {
+        return sessionDate;
+    }
+
+    public void setSessionDate(LocalDate sessionDate) {
+        this.sessionDate = sessionDate;
+    }
+
+    public String getWorkType() {
+        return workType;
+    }
+
+    public void setWorkType(String workType) {
+        this.workType = workType;
+    }
+
+    public String getOutcome() {
+        return outcome;
+    }
+
+    public void setOutcome(String outcome) {
+        this.outcome = outcome;
+    }
+
+    public String getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(String difficulty) {
+        this.difficulty = difficulty;
+    }
+
+    public String getTags() {
+        return tags;
+    }
+
+    public void setTags(String tags) {
+        this.tags = tags;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }
