@@ -1,10 +1,54 @@
-version: '3.8'
+version: "3.9"
 
 services:
-  app:
-    build: .
-    container_name: springboot-devtracker-app
+  postgres:
+    image: postgres:16-alpine
+    container_name: devtrack-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: devtrack
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - devtrack-network
+
+  backend:
+    build:
+      context: ./devtrack-backend
+    container_name: devtrack-backend
+    restart: always
     ports:
       - "8080:8080"
-    # no depends_on, no DB
-    # Remove environment variables for MySQL
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/devtrack
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      JWT_SECRET: dGVzdC1zZWNyZXQta2V5LXRoYXQtaXMtbG9uZy1lbm91Z2gtZm9yLUhTMjU2
+      JWT_EXPIRATION: 86400000
+    depends_on:
+      - postgres
+    networks:
+      - devtrack-network
+
+  frontend:
+    build:
+      context: ./devtrack-frontend
+    container_name: devtrack-frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - devtrack-network
+
+volumes:
+  postgres-data:
+
+networks:
+  devtrack-network:
+    driver: bridge
