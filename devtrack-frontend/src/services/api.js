@@ -1,15 +1,18 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+// ✅ Base URL (works for local + production)
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
+// ✅ Create Axios instance
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_BASE_URL}/api`, // always include /api here
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Add token to requests if it exists
+// ✅ Attach JWT token automatically
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -21,13 +24,13 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Auth API
+// ================= AUTH API =================
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
 };
 
-// Task API
+// ================= TASK API =================
 export const taskAPI = {
   getAll: () => api.get('/tasks'),
   getById: (id) => api.get(`/tasks/${id}`),
@@ -36,7 +39,7 @@ export const taskAPI = {
   delete: (id) => api.delete(`/tasks/${id}`),
 };
 
-// Session API
+// ================= SESSION API =================
 export const sessionAPI = {
   getAll: () => api.get('/sessions'),
   getById: (id) => api.get(`/sessions/${id}`),
@@ -44,9 +47,10 @@ export const sessionAPI = {
   delete: (id) => api.delete(`/sessions/${id}`),
 };
 
-// Analytics API
+// ================= ANALYTICS API =================
 export const analyticsAPI = {
   get: () => api.get('/analytics'),
 };
 
+// ✅ Export default instance
 export default api;
