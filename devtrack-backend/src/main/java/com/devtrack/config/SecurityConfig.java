@@ -19,10 +19,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
-/**
- * Spring Security Configuration
- * Configures JWT authentication and authorization
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -30,44 +26,65 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    // 🔐 Password Encoder
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // 🔑 Authentication Manager
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
+    // 🚀 MAIN SECURITY CONFIG
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            // Disable CSRF
             .csrf(csrf -> csrf.disable())
+
+            // Enable CORS
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+            // Stateless session (JWT)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+            // 🔥 AUTHORIZATION RULES (FIXED)
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints (no authentication required)
+                // ✅ Allow Render health check
+                .requestMatchers("/actuator/**").permitAll()
+
+                // ✅ Allow root (optional but helpful)
+                .requestMatchers("/").permitAll()
+
+                // ✅ Public auth APIs
                 .requestMatchers("/api/auth/**").permitAll()
-                // All other endpoints require authentication
+
+                // 🔒 Secure all other endpoints
                 .anyRequest().authenticated()
             )
-            // Add JWT filter before Spring Security's default filter
+
+            // 🔥 Add JWT filter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
+    // 🌐 CORS CONFIG
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("*")); // Allow all origins (change for production)
+
+        configuration.setAllowedOrigins(Arrays.asList("*")); // allow all (change in production)
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
 }
