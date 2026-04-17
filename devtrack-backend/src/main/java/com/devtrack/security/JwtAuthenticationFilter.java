@@ -19,7 +19,6 @@ import java.util.ArrayList;
 
 /**
  * JWT Authentication Filter
- * Intercepts every request and validates JWT token
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -31,51 +30,61 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private UserRepository userRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        
+
+        String path = request.getRequestURI();
+
+        // ✅ SKIP JWT for public endpoints (VERY IMPORTANT)
+        if (path.startsWith("/actuator") ||
+            path.startsWith("/api/auth") ||
+            path.equals("/")) {
+
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         final String authorizationHeader = request.getHeader("Authorization");
 
         String email = null;
         String jwt = null;
 
-        // Extract JWT from Authorization header
+        // 🔍 Extract JWT
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             jwt = authorizationHeader.substring(7);
             try {
                 email = jwtUtil.extractEmail(jwt);
             } catch (Exception e) {
-                logger.error("JWT token extraction failed: " + e.getMessage());
+                logger.error("JWT extraction failed: " + e.getMessage());
             }
         }
 
-        // Validate token and set authentication
+        // 🔐 Validate JWT
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            
-            // Load user from database
+
             var user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-            // Validate token
             if (jwtUtil.validateToken(jwt, email)) {
-                // Create UserDetails (Spring Security requires this)
+
                 UserDetails userDetails = org.springframework.security.core.userdetails.User
                         .withUsername(email)
                         .password(user.getPassword())
                         .authorities(new ArrayList<>())
                         .build();
 
-                UsernamePasswordAuthenticationToken authToken = 
-                    new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                
-                // Set authentication in security context
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails, null, userDetails.getAuthorities());
+
+                authToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
+
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
-        
+
         filterChain.doFilter(request, response);
     }
 }
