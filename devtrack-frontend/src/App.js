@@ -1,5 +1,11 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate
+} from 'react-router-dom';
+
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Pages
@@ -10,86 +16,102 @@ import Tasks from './pages/Tasks';
 import Sessions from './pages/Sessions';
 import Analytics from './pages/Analytics';
 
-// Protected Route Component
+// ================= PROTECTED ROUTE =================
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
-  
-  return isAuthenticated ? children : <Navigate to="/login" />;
+
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
-// Public Route (redirect to dashboard if already logged in)
+// ================= PUBLIC ROUTE =================
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  
+
   if (loading) {
     return <div className="loading">Loading...</div>;
   }
-  
-  return !isAuthenticated ? children : <Navigate to="/dashboard" />;
+
+  return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
 };
 
+// ================= ROUTES =================
 function AppRoutes() {
   return (
     <Router>
       <Routes>
-        <Route 
-          path="/login" 
+
+        {/* Public Routes */}
+        <Route
+          path="/login"
           element={
             <PublicRoute>
               <Login />
             </PublicRoute>
-          } 
+          }
         />
-        <Route 
-          path="/register" 
+
+        <Route
+          path="/register"
           element={
             <PublicRoute>
               <Register />
             </PublicRoute>
-          } 
+          }
         />
-        <Route 
-          path="/dashboard" 
+
+        {/* Protected Routes */}
+        <Route
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/tasks" 
+
+        <Route
+          path="/tasks"
           element={
             <ProtectedRoute>
               <Tasks />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/sessions" 
+
+        <Route
+          path="/sessions"
           element={
             <ProtectedRoute>
               <Sessions />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/analytics" 
+
+        <Route
+          path="/analytics"
           element={
             <ProtectedRoute>
               <Analytics />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+
+        {/* Default Route */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        {/* Catch-all Route (VERY IMPORTANT 🔥) */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
       </Routes>
     </Router>
   );
 }
 
+// ================= APP =================
 function App() {
   return (
     <AuthProvider>
