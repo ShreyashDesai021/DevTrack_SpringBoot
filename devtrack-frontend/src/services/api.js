@@ -1,18 +1,18 @@
 import axios from 'axios';
 
-// ✅ Base URL (works for local + production)
+// Base URL
 const API_BASE_URL =
   process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
-// ✅ Create Axios instance
+// Axios instance
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api`, // always include /api here
+  baseURL: `${API_BASE_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// ✅ Attach JWT token automatically
+// Attach token automatically
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -24,33 +24,25 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ================= AUTH API =================
+// AUTH
 export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   login: (data) => api.post('/auth/login', data),
 };
 
-// ================= TASK API =================
+// TASK
 export const taskAPI = {
   getAll: () => api.get('/tasks'),
-  getById: (id) => api.get(`/tasks/${id}`),
-  create: (data) => api.post('/tasks', data),
-  update: (id, data) => api.put(`/tasks/${id}`, data),
-  delete: (id) => api.delete(`/tasks/${id}`),
 };
 
-// ================= SESSION API =================
+// SESSION
 export const sessionAPI = {
   getAll: () => api.get('/sessions'),
-  getById: (id) => api.get(`/sessions/${id}`),
-  create: (data) => api.post('/sessions', data),
-  delete: (id) => api.delete(`/sessions/${id}`),
 };
 
-// ================= ANALYTICS API =================
+// ANALYTICS
 export const analyticsAPI = {
   get: () => api.get('/analytics'),
 };
 
-// ✅ Export default instance
 export default api;
