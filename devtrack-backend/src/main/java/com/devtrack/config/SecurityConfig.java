@@ -4,18 +4,17 @@ import com.devtrack.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.web.cors.*;
 
 import java.util.Arrays;
 
@@ -51,25 +50,33 @@ public class SecurityConfig {
             // Stateless session (JWT)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            // 🔥 AUTHORIZATION RULES (FIXED)
+            // 🔥 AUTHORIZATION RULES
             .authorizeHttpRequests(auth -> auth
-                // ✅ Allow Render health check
+                // ✅ Allow Render health check (VERY IMPORTANT)
+                .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
 
-                // ✅ Allow root (optional but helpful)
+                // ✅ Allow root
                 .requestMatchers("/").permitAll()
 
-                // ✅ Public auth APIs
+                // ✅ Public APIs
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // 🔒 Secure all other endpoints
+                // 🔒 Secure everything else
                 .anyRequest().authenticated()
             )
 
-            // 🔥 Add JWT filter
+            // 🔥 JWT Filter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    // 🔥 BYPASS SECURITY COMPLETELY FOR ACTUATOR (CRITICAL FIX)
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring()
+                .requestMatchers("/actuator/**");
     }
 
     // 🌐 CORS CONFIG
@@ -77,7 +84,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(Arrays.asList("*")); // allow all (change in production)
+        configuration.setAllowedOrigins(Arrays.asList("*")); // change in prod
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
